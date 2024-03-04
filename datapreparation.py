@@ -3,9 +3,32 @@ import numpy as np
 from keras.preprocessing.text import Tokenizer
 from keras.utils import pad_sequences
 import pickle
-from sklearn.model_selection import train_test_split
 
 from config import Config
+
+
+def get_tokenizer(config: Config, load: bool = True, texts: list[str] = None) -> Tokenizer:
+    if load:
+        with open('tokenizer.pickle', 'rb') as handle:
+            return pickle.load(handle)
+    if texts is None:
+        raise ValueError("You need to give texts to fit new tokenizer")
+
+    tokenizer = Tokenizer(num_words=config.VOCAB_SIZE, oov_token=config.OOV_TOKEN)
+    tokenizer.fit_on_texts(texts)
+
+    return tokenizer
+
+
+def tokenize(data: list[str], config: Config, load=True) -> np.ndarray:
+    tokenizer = get_tokenizer(config, load, data)
+
+    seq = tokenizer.texts_to_sequences(data)
+
+    padded = pad_sequences(seq, maxlen=config.MAX_LENGTH,
+                           padding=config.PADDING_TYPE, truncating=config.TRUNC_TYPE)
+
+    return np.array(padded)
 
 
 def configure(config: Config, df: pd.DataFrame):
@@ -19,29 +42,26 @@ def get_data(config: Config) -> pd.DataFrame:
     return df
 
 
-def tokenize(df: pd.DataFrame, config: Config):
-    tokenizer = Tokenizer(num_words=config.VOCAB_SIZE, oov_token=config.OOV_TOKEN)
-    tokenizer.fit_on_texts(df["review"])
-    word_index = tokenizer.word_index
-
-    seq = tokenizer.texts_to_sequences(df["review"])
-
-    padded = pad_sequences(seq, maxlen=config.MAX_LENGTH,
-                           padding=config.PADDING_TYPE, truncating=config.TRUNC_TYPE)
-
-    with open('tokenizer.pickle', 'wb') as handle:
-        pickle.dump(tokenizer, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    return np.array(padded)
-
-
-def preprocess(config: Config) -> tuple:
+def get_train_data(config: Config) -> tuple:
     """Returns (train_x, train_y, test_x, test_y)"""
 
     df = get_data(config)
     configure(config, df)
     train_size = int(len(df) * 0.8)
-    train_df, test_df = df[:train_size], df[train_size:]
+    train_df = df[:train_size]
 
-    return (tokenize(train_df, config), train_df["sentiment"].to_numpy(),
-            tokenize(test_df, config), test_df["sentiment"].to_numpy())
+    x_train = tokenize(train_df["review"].tolist(), config, load=False)
+    y_train = train_df["sentiment"].to_numpy()
+
+    return x_train, y_train
+
+
+def get_test_data(config: Config) -> tuple:
+    df = get_data(config)
+    train_size = int(len(df) * 0.8)
+    test_df = df[train_size:]
+
+    x_test = tokenize(test_df["review"].tolist(), config)
+    y_test = test_df["sentiment"].to_numpy()
+
+    return x_test, y_test

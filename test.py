@@ -1,25 +1,10 @@
-import pickle
-
 import keras
-import numpy as np
-import pandas as pd
 from keras import Model
-from keras.utils import pad_sequences
 from sklearn.metrics import classification_report
 
 from config import Config
 import datapreparation as dp
-
-
-def tokenize_text(text: str, config: Config) -> np.ndarray:
-    with open('tokenizer.pickle', 'rb') as handle:
-        tokenizer = pickle.load(handle)
-        seq = tokenizer.texts_to_sequences([text])
-
-        padded = pad_sequences(seq, maxlen=config.MAX_LENGTH,
-                               padding=config.PADDING_TYPE, truncating=config.TRUNC_TYPE)
-
-        return np.array(padded)
+from sklearn.metrics import confusion_matrix
 
 
 def get_model() -> Model:
@@ -27,7 +12,7 @@ def get_model() -> Model:
 
 
 def get_model_prediction(text: str, model: Model, config: Config):
-    tokenized_text = tokenize_text(text, config)
+    tokenized_text = dp.tokenize([text], config)
 
     prediction = model.predict([tokenized_text])
 
@@ -40,15 +25,18 @@ def evaluate_model(x_test, y_test):
     print(f"[Test loss] - {test_loss}, [Test accuracy] - {test_acc}")
 
     pp = model.predict(x_test)
-    y_pred = np.argmax(pp, axis=1)
 
-    pd.crosstab(y_test, y_pred, rownames=["True"], colnames=["Predicted"], margins=True)
+    y_pred = pp.round()
+
+    cm = confusion_matrix(y_test, y_pred)
+    print(cm)
+
     cr = classification_report(y_test, y_pred)
     print(cr)
 
 
 if __name__ == '__main__':
     config = Config()
-    x_train, y_train, x_test, y_test = dp.preprocess(config)
+    x_test, y_test = dp.get_test_data(config)
 
     evaluate_model(x_test, y_test)
