@@ -1,9 +1,9 @@
 import numpy as np
 import tensorflow as tf
-from datapreparation import Config
+import config as c
 
 
-def create_model(c: Config):
+def create_model():
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(c.VOCAB_SIZE, 64, input_length=c.MAX_LENGTH),
         tf.keras.layers.Bidirectional(tf.keras.layers.GRU(128)),
@@ -16,8 +16,8 @@ def create_model(c: Config):
     return model
 
 
-def train_model(x: np.ndarray, y: np.ndarray, c: Config):
-    model = create_model(c)
+def train_model(x: np.ndarray, y: np.ndarray):
+    model = create_model()
     history = model.fit(x, y, epochs=2, validation_split=0.2)
     model.save("trained_model")
 

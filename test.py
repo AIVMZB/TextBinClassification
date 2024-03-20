@@ -2,16 +2,16 @@ import keras
 from keras import Model
 from sklearn.metrics import classification_report
 
-from config import Config
 import datapreparation as dp
 from sklearn.metrics import confusion_matrix
+import config
 
 
 def get_model() -> Model:
     return keras.models.load_model("trained_model")
 
 
-def get_model_prediction(text: str, model: Model, config: Config):
+def get_model_prediction(text: str, model: Model):
     tokenized_text = dp.tokenize([text], config)
 
     prediction = model.predict([tokenized_text])
@@ -36,7 +36,6 @@ def evaluate_model(x_test, y_test):
 
 
 if __name__ == '__main__':
-    config = Config()
-    x_test, y_test = dp.get_test_data(config)
+    x_test, y_test = dp.get_test_data()
 
     evaluate_model(x_test, y_test)
